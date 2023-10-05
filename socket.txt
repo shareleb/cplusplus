@@ -90,6 +90,58 @@ C10K
      可以执行pthread_self函数返回线程tid。 pthread_t pthread_self(void)
     终止线程：
         终止一个线程最直接的方法是在父线程内调用以下函数：void pthread_exit(void *status)
+        当调用这个函数之后，父线程会等待其他所有的子线程终止，之后父线程自己终止。
+        也可以通过调用pthread_cancel来主动终止一个子线程，和pthread_exit不同的是，它可以指定某个子线程终止。 int pthread_cancel(pthread_t tid)
+
+    回收线程：
+        int pthread_join(pthread_t tid, void ** thread_return)回收已终止线程的资源
+        当调用pthread_join时，主线程会阻塞，直到对应tid的子线程自然终止。和pthread_cancel不同的是，它不会强迫子线程终止。
+
+    分离线程
+        一个线程的重要属性是可结合的，或者是分离的。一个可结合的线程是能够被其他线程杀死和回收资源的；而一个分离的线程不能被其他线程杀死或回收资源。一般来说，默认的属性是可结合的。
+        int pthread_detach(pthread_t tid)
+        在高并发的例子里，每个连接都由一个线程单独处理，在这种情况下，服务器程序并不需要对每个子线程进行终止，这样的话，每个子线程可以在入口函数开始的地方，把自己设置为分离的，这样就能在它终止后自动回收相关的线程资源了，就不需要调用pthread_join函数了。
+       
+    
+    事件驱动模型，也被叫做反应堆模型（reactor）
+     事件分发线程的任务，就是为每个发生的事件找到对应的事件回调函数并执行它
+        第一，它存在一个无限循环的事件分发线程，或者叫做reactor线程、Event loop线程。这个事件分发线程的背后，就是poll、epoll等I/O分发技术的使用。
+        第二，所有的I/O操作都可以抽象成事件，每个事件必须有回调函数来处理。acceptor上有连接建立成功、已连接套接字上发送缓冲区空出可以写、通信管道pipe上有数据可以读，这些都是一个个事件，通过事件分发，这些事件都可以一一被检测，并调用对应的回调函数加以处理。
+
+    read：从套接字收取数据；
+    decode：对收到的数据进行解析；
+    compute：根据解析之后的内容，进行计算和处理；
+    encode：将处理之后的结果，按照约定的格式进行编码；
+    send：最后，通过套接字把结果发送出去。
+
+   reactor反应堆模式，并且让reactor反应堆同时分发Acceptor上的连接建立事件和已建立连接的I/O事件。
+   将acceptor上的连接建立事件和已建立连接的I/O事件分离，形成所谓的主-从reactor模式。
+    主-从reactor模式
+        -主-从这个模式的核心思想是，主反应堆线程只负责分发Acceptor连接建立，已连接套接字上的I/O事件交给sub-reactor负责分发。其中sub-reactor的数量，可以根据CPU的核数来灵活设置。
+    主-从reactor+worker threads模式
+        如果说主-从reactor模式解决了I/O分发的高效率问题，那么work threads就解决了业务逻辑和I/O分发之间的耦合问题。把这两个策略组装在一起，就是实战中普遍采用的模式。大名鼎鼎的Netty，就是把这种模式发挥到极致的一种实现。不过要注意Netty里面提到的worker线程，其实就是我们这里说的从reactor线程，并不是处理具体业务逻辑的worker线程。
+
+Proactor的网络事件驱动模式  
+    aio_write：用来向内核提交异步写操作；
+    aio_read：用来向内核提交异步读操作；
+    aio_error：获取当前异步操作的状态； 
+    aio_return：获取异步操作读、写的字节数。
+
+
+
+
+epoll源码：
+    eventpoll这个数据结构，这个数据结构是我们在调用epoll_create之后内核侧创建的一个句柄，表示了一个epoll实例。后续如果我们再调用epoll_ctl和epoll_wait等，都是对这个eventpoll数据进行操作，这部分数据会被保存在epoll_create创建的匿名文件file的private_data字段中。
+    每当我们调用epoll_ctl增加一个fd时，内核就会为我们创建出一个epitem实例，并且把这个实例作为红黑树的一个子节点，增加到eventpoll结构体中的红黑树中，对应的字段是rbr。这之后，查找每一个fd上是否有事件发生都是通过红黑树上的epitem来操作。
+    每次当一个fd关联到一个epoll实例，就会有一个eppoll_entry产生。eppoll_entry的结构如下：
+
+
+
+
+
+
+
+
 
 
 

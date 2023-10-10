@@ -23,6 +23,17 @@ class Lock : public NoCopy {
    mutable pthread_mutex_t lock_;
 };
 
+class LockGuard : public NoCopy {
+ public:
+  explicit LockGuard(Lock& lock) : lock_(lock) {
+    lock_.lock();
+  }
+  ~LockGuard() {
+    lock_.unlock();
+  }
+ private:
+  Lock& lock_;
+};
     
 } // namespace leb
 

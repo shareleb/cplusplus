@@ -4,7 +4,7 @@ namespace leb
 {
 int main() {
   const Lock lock;
-  lock.lock()
+  lock.lock();
 
   return 0;
 }

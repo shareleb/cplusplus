@@ -1,0 +1,8 @@
+export TEST_TMPDIR="/opt/.." 缓存放到指定目录
+
+ldd 查找所依赖的so.
+cp -rf $ROOT_PATH/bazel-bin/smartbox_frame $ROOT_PATH/deploy/deploy_platform/bin/smartbox_frame
+LDD_OBJS=`ldd bazel-bin/smartbox_frame | grep "$ROOT_PATH\|bazel_env" | awk '{print $3;}'`
+for f in $LDD_OBJS; do
+   cp -rfL $f $ROOT_PATH/deploy/deploy_platform/lib/
+done

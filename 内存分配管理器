@@ -1,0 +1,17 @@
+内存分配管理器
+
+
+ptmalloc 是linux glibc的内存分配管理器。malloc 和free底层使用的就是ptmalloc。
+
+当线程使用malloc申请内存时， 线程私有变量会绑定一个arena，如果这个arena已经被加锁了，则遍历向后继续找未加锁的arena,或者新建一个arena分区
+
+而在arena内存， 是有一个数组，每个下面挂着一串chunk， 数组从小到大排序，每串chunk大小相同，当分配内存小于64B时，直接从fast bin内找合适空闲chunk分配，
+如果不够，则往后找lager bin， 再不够取top chunk上分配，还不够直接mmap。
+回收机制， free 内部实现会通过指针找到对应的arena， 然后如果小直接放到fast bin内，如果大则合并方到未分配的chunks里， 如果topchunk 过大，操作系统会制动减少堆的大小。
+
+缺点：
+  1.会有额外开销，每个chunk需要8字节对齐。
+  2.对arena操作前需要加锁，多线程频繁申请释放内存会锁竞争增大。
+  3.容易有内存碎片，不利于回收。
+  
+  
